@@ -1,17 +1,6 @@
-#!/usr/bin/env python
-
 import re
-import glob
 from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
-
-
-DATA_TEST_NEG_REVIEW = 'aclImdb/test/neg/*.txt'
-DATA_TEST_POS_REVIEW = 'aclImdb/test/pos/*.txt'
-
-DATA_TRAINING_NEG_REVIEW = 'aclImdb/train/neg/*.txt'
-DATA_TRAINING_POS_REVIEW = 'aclImdb/train/pos/*.txt'
-DATA_TRAINING_UNSUP_REVIEW = 'aclImdb/train/unsup/*.txt'
 
 
 class BaseParser(object):
@@ -99,28 +88,3 @@ class WordsParser(BaseParser):
             self.split_to_words(
                 self.clean_punctuation(
                     self.clean_html_markup(self.text))))
-
-
-def read_and_parse(pattern, parser=WordsParser):
-    result = []
-
-    for filename in glob.glob(pattern):
-        with open(filename, 'r') as file:
-            result.append(parser(file).parse())
-
-    return result
-
-
-def run():
-    pos = read_and_parse(DATA_TEST_POS_REVIEW)
-    neg = read_and_parse(DATA_TEST_NEG_REVIEW)
-
-    print ('aaaaaa', pos, neg)
-
-
-if __name__ == '__main__':
-    try:
-        run()
-    except LookupError as e:
-        import nltk
-        nltk.download()
