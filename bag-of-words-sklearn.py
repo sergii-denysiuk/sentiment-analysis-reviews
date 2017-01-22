@@ -63,7 +63,8 @@ def naive_bayes_bernoulli(train_review_bag_of_words, train_review_sentiments, te
 def k_nearest_neighbors(train_review_bag_of_words, train_review_sentiments, test_review_texts,
                         n_neighbors=10, weights='uniform', algorithm='auto'):
     # initialize a k-Nnearest Neighbors classifier
-    knn = KNeighborsClassifier(n_neighbors=n_neighbors, weights=weights, algorithm=algorithm)
+    knn = KNeighborsClassifier(
+        n_neighbors=n_neighbors, weights=weights, algorithm=algorithm)
 
     # fit the classifier to the training set, using the bag of words as
     # features and the sentiment labels as the response variable
@@ -75,7 +76,8 @@ def k_nearest_neighbors(train_review_bag_of_words, train_review_sentiments, test
 
 def write_results_to_csv(test_review_ids, test_reviews_sentiments_result,
                          test_review_sentiments, filename):
-    # Copy the results to a pandas dataframe with an 'id' column and a 'sentiment' column
+    # Copy the results to a pandas dataframe with an 'id' column and a
+    # 'sentiment' column
     output = pd.DataFrame(data={
         'id': test_review_ids,
         'sentiment_prediction': test_reviews_sentiments_result,
@@ -109,20 +111,14 @@ def run():
     # second: transforms our training data into feature vectors
     train_review_texts = vectorizer.fit_transform(train_review_texts).toarray()
 
-    # shape of created model
-    # print(train_review_texts.shape)
-
-    # selected words
-    # print(vectorizer.get_feature_names())
-
-    # count of each word
-    # print(utils.count_words(vectorizer.get_feature_names(), train_review_texts))
-
     print('Cleaning and parsing the test set movie reviews...\n')
 
+    test_pos_reviews = utils.read_and_parse(config.DATA_TEST_POS_REVIEW)
+    test_neg_reviews = utils.read_and_parse(config.DATA_TEST_NEG_REVIEW)
+
     test_review_ids, test_review_texts, test_review_sentiments = utils.build_set(
-        utils.read_and_parse(config.DATA_TEST_POS_REVIEW),
-        utils.read_and_parse(config.DATA_TEST_NEG_REVIEW),
+        test_pos_reviews,
+        test_neg_reviews,
         is_join=True,
         is_shuffle=True)
 
@@ -175,31 +171,69 @@ def run():
     nbb_filename = 'bag-of-words-sklearn-nbb-model.csv'
     knn_filename = 'bag-of-words-sklearn-knn-model.csv'
 
-    print ('Wrote Random Forest results to {filename}\n'.format(filename=rf_filename))
+    print ('Wrote Random Forest results to {filename}\n'.format(
+        filename=rf_filename))
     write_results_to_csv(
         test_review_ids, test_reviews_sentiments_result_rf,
         test_review_sentiments, rf_filename)
 
-    print ('Wrote Naive Bayes Gaussian results to {filename}\n'.format(filename=nbg_filename))
+    print ('Wrote Naive Bayes Gaussian results to {filename}\n'.format(
+        filename=nbg_filename))
     write_results_to_csv(
         test_review_ids, test_reviews_sentiments_result_nbg,
         test_review_sentiments, nbg_filename)
 
-    print ('Wrote Naive Bayes Multinomial results to {filename}\n'.format(filename=nbg_filename))
+    print ('Wrote Naive Bayes Multinomial results to {filename}\n'.format(
+        filename=nbg_filename))
     write_results_to_csv(
         test_review_ids, test_reviews_sentiments_result_nbm,
         test_review_sentiments, nbm_filename)
 
-    print ('Wrote Naive Bayes Bernoulli results to {filename}\n'.format(filename=nbg_filename))
+    print ('Wrote Naive Bayes Bernoulli results to {filename}\n'.format(
+        filename=nbg_filename))
     write_results_to_csv(
         test_review_ids, test_reviews_sentiments_result_nbb,
         test_review_sentiments, nbb_filename)
 
-    print ('Wrote k-Nearest Neighbors results to {filename}\n'.format(filename=nbg_filename))
+    print (
+        'Wrote k-Nearest Neighbors results to {filename}\n'.format(filename=nbg_filename))
     write_results_to_csv(
         test_review_ids, test_reviews_sentiments_result_knn,
         test_review_sentiments, knn_filename)
 
+    with open("summary.txt", "w") as summary_file:
+        print('Size of train dataset: {size}'.format(
+            size=len(train_review_ids)), file=summary_file)
+
+        print('Size of test dataset: {size}'.format(
+            size=len(test_review_ids)), file=summary_file)
+
+        print('\n', file=summary_file)
+
+        print('Accuracy of the the Random Forest: {accuracy}'.format(
+            accuracy=utils.calculate_accuracy(
+                test_review_sentiments, test_reviews_sentiments_result_rf)), file=summary_file)
+
+        print('Accuracy of the Naive Bayes Gaussian: {accuracy}'.format(
+            accuracy=utils.calculate_accuracy(
+                test_review_sentiments, test_reviews_sentiments_result_nbg)), file=summary_file)
+
+        print('Accuracy of the Naive Bayes Multinomial: {accuracy}'.format(
+            accuracy=utils.calculate_accuracy(
+                test_review_sentiments, test_reviews_sentiments_result_nbm)), file=summary_file)
+
+        print('Accuracy of the Naive Bayes Bernoulli: {accuracy}'.format(
+            accuracy=utils.calculate_accuracy(
+                test_review_sentiments, test_reviews_sentiments_result_nbb)), file=summary_file)
+
+        print('Accuracy of the k-Nearest Neighbors: {accuracy}'.format(
+            accuracy=utils.calculate_accuracy(
+                test_review_sentiments, test_reviews_sentiments_result_knn)), file=summary_file)
+
+        print('\n', file=summary_file)
+
+        print('Count of each word in train dataset: {counts}'.format(
+            counts=utils.count_words(vectorizer.get_feature_names(), train_review_texts)), file=summary_file)
 
 if __name__ == '__main__':
     try:
