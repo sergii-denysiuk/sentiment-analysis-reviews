@@ -6,12 +6,12 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import BernoulliNB
+from sklearn.neighbors import KNeighborsClassifier
 
 import pandas as pd
 
 
-def random_forest(train_review_bag_of_words, train_review_sentiments,
-                  vectorizer_bag_of_words, test_review_texts,
+def random_forest(train_review_bag_of_words, train_review_sentiments, test_review_texts,
                   n_estimators=100):
     # initialize a Random Forest classifier with ``n_estimators`` trees
     forest = RandomForestClassifier(n_estimators=n_estimators)
@@ -24,43 +24,53 @@ def random_forest(train_review_bag_of_words, train_review_sentiments,
     return forest.predict(test_review_texts)
 
 
-def naive_bayes_gaussian(train_review_bag_of_words, train_review_sentiments,
-                         vectorizer_bag_of_words, test_review_texts):
+def naive_bayes_gaussian(train_review_bag_of_words, train_review_sentiments, test_review_texts):
     # initialize a Naive Bayes Gaussian classifier
-    gnb = GaussianNB()
+    nbg = GaussianNB()
 
     # fit the classifier to the training set, using the bag of words as
     # features and the sentiment labels as the response variable
-    gnb = gnb.fit(train_review_bag_of_words, train_review_sentiments)
+    nbg = nbg.fit(train_review_bag_of_words, train_review_sentiments)
 
     # use the random forest to make sentiment label predictions
-    return gnb.predict(test_review_texts)
+    return nbg.predict(test_review_texts)
 
 
-def naive_bayes_multinomial(train_review_bag_of_words, train_review_sentiments,
-                            vectorizer_bag_of_words, test_review_texts):
+def naive_bayes_multinomial(train_review_bag_of_words, train_review_sentiments, test_review_texts):
     # initialize a Naive Bayes Multinomial classifier
-    gnb = MultinomialNB()
+    nbm = MultinomialNB()
 
     # fit the classifier to the training set, using the bag of words as
     # features and the sentiment labels as the response variable
-    gnb = gnb.fit(train_review_bag_of_words, train_review_sentiments)
+    nbm = nbm.fit(train_review_bag_of_words, train_review_sentiments)
 
     # use the random forest to make sentiment label predictions
-    return gnb.predict(test_review_texts)
+    return nbm.predict(test_review_texts)
 
 
-def naive_bayes_bernoulli(train_review_bag_of_words, train_review_sentiments,
-                          vectorizer_bag_of_words, test_review_texts):
+def naive_bayes_bernoulli(train_review_bag_of_words, train_review_sentiments, test_review_texts):
     # initialize a Naive Bayes Bernoulli classifier
-    gnb = BernoulliNB()
+    nbb = BernoulliNB()
 
     # fit the classifier to the training set, using the bag of words as
     # features and the sentiment labels as the response variable
-    gnb = gnb.fit(train_review_bag_of_words, train_review_sentiments)
+    nbb = nbb.fit(train_review_bag_of_words, train_review_sentiments)
 
     # use the random forest to make sentiment label predictions
-    return gnb.predict(test_review_texts)
+    return nbb.predict(test_review_texts)
+
+
+def k_nearest_neighbors(train_review_bag_of_words, train_review_sentiments, test_review_texts,
+                        n_neighbors=10, weights='uniform', algorithm='auto'):
+    # initialize a k-Nnearest Neighbors classifier
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors, weights=weights, algorithm=algorithm)
+
+    # fit the classifier to the training set, using the bag of words as
+    # features and the sentiment labels as the response variable
+    knn = knn.fit(train_review_bag_of_words, train_review_sentiments)
+
+    # use the random forest to make sentiment label predictions
+    return knn.predict(test_review_texts)
 
 
 def write_results_to_csv(test_review_ids, test_reviews_sentiments_result,
@@ -121,23 +131,23 @@ def run():
 
     print('Training the Random Forest...\n')
     test_reviews_sentiments_result_rf = random_forest(
-        train_review_texts, train_review_sentiments,
-        vectorizer, test_review_texts)
+        train_review_texts, train_review_sentiments, test_review_texts)
 
     print('Training the Naive Bayes Gaussian...\n')
     test_reviews_sentiments_result_nbg = naive_bayes_gaussian(
-        train_review_texts, train_review_sentiments,
-        vectorizer, test_review_texts)
+        train_review_texts, train_review_sentiments, test_review_texts)
 
     print('Training the Naive Bayes Multinomial...\n')
-    test_reviews_sentiments_result_nbm = naive_bayes_gaussian(
-        train_review_texts, train_review_sentiments,
-        vectorizer, test_review_texts)
+    test_reviews_sentiments_result_nbm = naive_bayes_multinomial(
+        train_review_texts, train_review_sentiments, test_review_texts)
 
     print('Training the Naive Bayes Bernoulli...\n')
-    test_reviews_sentiments_result_nbb = naive_bayes_gaussian(
-        train_review_texts, train_review_sentiments,
-        vectorizer, test_review_texts)
+    test_reviews_sentiments_result_nbb = naive_bayes_bernoulli(
+        train_review_texts, train_review_sentiments, test_review_texts)
+
+    print('Training the k-Nearest Neighbors...\n')
+    test_reviews_sentiments_result_knn = k_nearest_neighbors(
+        train_review_texts, train_review_sentiments, test_review_texts)
 
     print('Accuracy of the the Random Forest: {accuracy}\n'.format(
         accuracy=utils.calculate_accuracy(
@@ -155,10 +165,15 @@ def run():
         accuracy=utils.calculate_accuracy(
             test_review_sentiments, test_reviews_sentiments_result_nbb)))
 
+    print('Accuracy of the k-Nearest Neighbors: {accuracy}\n'.format(
+        accuracy=utils.calculate_accuracy(
+            test_review_sentiments, test_reviews_sentiments_result_knn)))
+
     rf_filename = 'bag-of-words-sklearn-rf-model.csv'
     nbg_filename = 'bag-of-words-sklearn-nbg-model.csv'
     nbm_filename = 'bag-of-words-sklearn-nbm-model.csv'
     nbb_filename = 'bag-of-words-sklearn-nbb-model.csv'
+    knn_filename = 'bag-of-words-sklearn-knn-model.csv'
 
     print ('Wrote Random Forest results to {filename}\n'.format(filename=rf_filename))
     write_results_to_csv(
@@ -179,6 +194,11 @@ def run():
     write_results_to_csv(
         test_review_ids, test_reviews_sentiments_result_nbb,
         test_review_sentiments, nbb_filename)
+
+    print ('Wrote k-Nearest Neighbors results to {filename}\n'.format(filename=nbg_filename))
+    write_results_to_csv(
+        test_review_ids, test_reviews_sentiments_result_knn,
+        test_review_sentiments, knn_filename)
 
 
 if __name__ == '__main__':
