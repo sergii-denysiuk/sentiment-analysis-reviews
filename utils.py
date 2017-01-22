@@ -13,13 +13,14 @@ def read_and_parse(path_pattern, parser=parsers.WordsParser):
     @kwargs:
         parser (class): parser class. Must be implementation of parsers.BaseParser class
     @returns:
-        list: list, which items is a parsed and cleaned data from files
+        list: list of tuples, which items is a parsed and cleaned data from files
+              example [('file', 'review text'), ...])
     """
     result = []
 
     for filename in glob.glob(path_pattern):
         with open(filename, 'r') as file:
-            result.append(parser(file).parse())
+            result.append((filename, parser(file).parse()))
 
     return result
 
@@ -31,29 +32,37 @@ def build_set(positive_set, negative_set,
 
     @args:
         positive_set (list): set with positive data
+                             example [('file_1', 'positive review text'), ...])
         negative_set (list): set with negative data
+                             example [('file_2', 'negative review text'), ...])
     @kwargs:
         is_join (boolean): is items in each set must be join from words to sentences
         is_shuffle (boolean): is positive and negative review must be shuffled
     @returns:
         tuple: tuple of two lists with reviews and it's sentiment values, respectively
     """
-    reviews = []
-    if is_join:
-        reviews = [' '.join(i) for i in positive_set] + \
-            [' '.join(i) for i in negative_set]
-    else:
-        reviews = positive_set + negative_set
+    reviews_ids = []
+    reviews_texts = []
+    reviews_sentiments = []
 
-    sentiments = [1] * len(positive_set) + [0] * len(negative_set)
+    reviews_ids = [i[0] for i in positive_set] + \
+        [i[0] for i in negative_set]
+
+    if is_join:
+        reviews_texts = [' '.join(i[1]) for i in positive_set] + \
+            [' '.join(i[1]) for i in negative_set]
+    else:
+        reviews_texts = positive_set + negative_set
+
+    reviews_sentiments = [1] * len(positive_set) + [0] * len(negative_set)
 
     if is_shuffle:
-        combined = list(zip(reviews, sentiments))
+        combined = list(zip(reviews_ids, reviews_texts, reviews_sentiments))
         random.shuffle(combined)
 
-        reviews[:], sentiments[:] = zip(*combined)
+        reviews_ids[:], reviews_texts[:], reviews_sentiments[:] = zip(*combined)
 
-    return (reviews, sentiments)
+    return (reviews_ids, reviews_texts, reviews_sentiments)
 
 
 def count_words(words, dataset):
