@@ -2,6 +2,7 @@ import glob
 import parsers
 import random
 import numpy
+import pandas
 
 
 def read_and_parse(path_pattern, parser=parsers.WordsParser):
@@ -10,7 +11,6 @@ def read_and_parse(path_pattern, parser=parsers.WordsParser):
 
     @args:
         path_pattern (string): pattern for files that must be processed
-    @kwargs:
         parser (class): parser class. Must be implementation of parsers.BaseParser class
     @returns:
         list: list of tuples, which items is a parsed and cleaned data from files
@@ -52,7 +52,8 @@ def build_set(positive_set, negative_set,
         reviews_texts = [' '.join(i[1]) for i in positive_set] + \
             [' '.join(i[1]) for i in negative_set]
     else:
-        reviews_texts = positive_set + negative_set
+        reviews_texts = [i[1] for i in positive_set] + \
+            [i[1] for i in negative_set]
 
     reviews_sentiments = [1] * len(positive_set) + [0] * len(negative_set)
 
@@ -85,20 +86,34 @@ def count_words(words, dataset):
     return result
 
 
-def calculate_accuracy(actual_list, recieved_list):
+def calculate_accuracy(actual_list, predicted_list):
     """
     Compare two lists and get percent of they matches.
 
     @args:
         actual_list (list): list of actual values
-        recieved_list (list): list of received values
+        predicted_list (list): list of received values
     @returns:
-        float: percent of match values from recieved_list to values from actual_list
+        float: percent of match values from predicted_list to values from actual_list
     """
     valid_part_len = 0
 
-    for i, j in zip(actual_list, recieved_list):
+    for i, j in zip(actual_list, predicted_list):
         if i == j:
             valid_part_len += 1
 
     return (100.0 / len(actual_list)) * valid_part_len
+
+
+def write_results_to_csv(ids, sentiments_actuals,
+                         sentiments_predictions, filename):
+    """
+    Write the results to a pandas dataframe.
+    """
+    output = pandas.DataFrame(data={
+        'id': ids,
+        'sentiment_actual': sentiments_actuals,
+        'sentiment_prediction': sentiments_predictions})
+
+    # use pandas to write the comma-separated output file
+    output.to_csv(filename, index=False, quoting=3)

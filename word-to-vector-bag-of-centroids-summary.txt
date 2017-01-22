@@ -1,0 +1,8 @@
+Size of train dataset: 1370
+Size of test dataset: 480
+
+
+Accuracy of the the Random Forest: 61.458333333333336
+Accuracy of the Naive Bayes Gaussian: 57.083333333333336
+Accuracy of the Naive Bayes Bernoulli: 56.04166666666667
+Accuracy of the k-Nearest Neighbors: 57.083333333333336

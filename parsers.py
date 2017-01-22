@@ -1,6 +1,18 @@
 import re
 from bs4 import BeautifulSoup
+
+import nltk.data
+
+try:
+    nltk.data.find('stopwords')
+    nltk.data.find('tokenizers')
+except LookupError:
+    nltk.download('stopwords')
+    nltk.download('punkt')
+
 from nltk.corpus import stopwords
+stopwords_list = set(stopwords.words('english'))
+tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
 
 class BaseParser(object):
@@ -9,39 +21,29 @@ class BaseParser(object):
     by inheritor parser class.
     """
 
-    def __init__(self, text):
+    def __init__(self, file):
         """
         Initialize by some text.
 
         @args:
-            text (string): raw text
+            file (_io.TextIOWrapper): file with raw text
         """
-        self.text = text
+        self.file = file
 
-    def parse(self):
-        raise NotImplementedError("Should have implemented this")
-
-
-class WordsParser(BaseParser):
-    """
-    Utility class for processing raw HTML text
-    into segments for further learning.
-    """
-
-    def clean_html_markup(self, text, parser='html.parser'):
+    def clean_html_markup(self, file, parser='html.parser'):
         """
         Remove HTML markup.
 
         @args:
-            text (string)
+            file (_io.TextIOWrapper): file with raw text
         @kwargs:
             parser (string)
         @returns:
             string: text cleaned from HTML markup
         """
-        return BeautifulSoup(text, parser).get_text()
+        return BeautifulSoup(file, parser).get_text()
 
-    def clean_punctuation(self, text):
+    def remove_non_letters(self, text):
         """
         Remove non-letters.
 
@@ -52,7 +54,40 @@ class WordsParser(BaseParser):
         """
         return re.sub("[^a-zA-Z]", " ", text)
 
-    def remove_stopwords(self, words, lang="english"):
+    def split_to_words(self, text):
+        """
+        Split into individual words.
+
+        @args:
+            text (string)
+        @returns:
+            list: list of words
+        """
+        return text.split()
+
+    def split_to_sentences(self, text, tokenizer=tokenizer):
+        """
+        Split into individual sentences.
+
+        @args:
+            text (string)
+        @returns:
+            list: list of sentences
+        """
+        return tokenizer.tokenize(text.strip())
+
+    def to_lower(self, text):
+        """
+        Convert text to lowercase.
+
+        @args:
+            text (string)
+        @returns:
+            string: text
+        """
+        return text.lower()
+
+    def remove_stopwords(self, words, stopwords_list=stopwords_list):
         """
         Remove stop words
 
@@ -63,28 +98,90 @@ class WordsParser(BaseParser):
         @returns:
             list: words without stopwords
         """
-        sw = set(stopwords.words(lang))
-        return [w for w in words if w not in sw]
-
-    def split_to_words(self, text):
-        """
-        Convert to lower case, split into individual words
-
-        @args:
-            text (string)
-        @returns:
-            list: list of words
-        """
-        return text.lower().split()
+        return [w for w in words if w not in stopwords_list]
 
     def parse(self):
+        raise NotImplementedError("Should have implemented this")
+
+
+class WordsParser(BaseParser):
+    """
+    Utility class for processing raw HTML text
+    into segments of words for further learning.
+    """
+
+    def parse(self,
+              is_remove_non_letters=True,
+              is_to_lower=True,
+              is_remove_stopwords=True):
         """
         Get cleaned words from text.
 
+        @kwargs:
+            is_remove_non_letters (boolean): is remove non-letters
+            is_to_lower (boolean): is convert to lowercase
+            is_remove_stopwords (boolean): is remove the stopwords
         @returns:
             list: list with cleaned words
         """
-        return self.remove_stopwords(
-            self.split_to_words(
-                self.clean_punctuation(
-                    self.clean_html_markup(self.text))))
+        result = self.clean_html_markup(self.file)
+
+        if is_remove_non_letters:
+            result = self.remove_non_letters(result)
+
+        if is_to_lower:
+            result = self.to_lower(result)
+
+        result = self.split_to_words(result)
+
+        if is_remove_stopwords:
+            result = self.remove_stopwords(result)
+
+        return result
+
+
+class SentencesParser(BaseParser):
+    """
+    Utility class for processing raw HTML text
+    into segments of sentences for further learning.
+    """
+
+    def parse(self,
+              tokenizer=tokenizer,
+              is_remove_non_letters=True,
+              is_to_lower=True,
+              is_sentence_split_to_words=True,
+              is_remove_stopwords=False):
+        """
+        Split a text into parsed sentences.text
+        It is better not to remove stop words because
+        the algorithm relies on the broader context of the sentence
+        in order to produce high-quality word vectors.
+
+        @kwargs:
+            tokenizer (object): tokenizer to split the paragraph into sentences
+            is_remove_stopwords (boolean): is to remove stopwords
+        @returns:
+            list: list of sentences. Each sentence is a list of words, so this returns a list of lists.
+        """
+        sentences = []
+        result = self.clean_html_markup(self.file)
+        raw_sentences = self.split_to_sentences(result, tokenizer)
+
+        for raw_sentence in raw_sentences:
+            if len(raw_sentence) > 0:
+                if is_remove_non_letters:
+                    raw_sentence = self.remove_non_letters(raw_sentence)
+
+                if is_to_lower:
+                    raw_sentence = self.to_lower(raw_sentence)
+
+                if is_sentence_split_to_words:
+                    raw_sentence = self.split_to_words(raw_sentence)
+
+                if is_remove_stopwords:
+                    raw_sentence = self.remove_stopwords(raw_sentence)
+
+                sentences.append(raw_sentence)
+
+        return sentences
