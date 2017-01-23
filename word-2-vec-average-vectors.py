@@ -4,7 +4,7 @@ import parsers
 import classifiers.sklearn as classifiers_sk
 
 from gensim.models import Word2Vec
-import numpy as np
+import numpy
 
 
 def get_avg_feature_vectors(reviews, model, num_features):
@@ -17,7 +17,7 @@ def get_avg_feature_vectors(reviews, model, num_features):
     counter = 0.
 
     # preallocate a 2D numpy array, for speed
-    reviewfeature_vecs = np.zeros(
+    reviewfeature_vecs = numpy.zeros(
         (len(reviews), num_features), dtype='float32')
 
     # loop through the reviews
@@ -38,7 +38,8 @@ def make_feature_vec(words, model, num_features):
     """
 
     # pre-initialize an empty numpy array (for speed)
-    feature_vec = np.zeros((num_features,), dtype='float32')
+    feature_vec = numpy.zeros(
+        (num_features,), dtype='float32')
 
     nwords = 0.
 
@@ -51,24 +52,19 @@ def make_feature_vec(words, model, num_features):
     for word in words:
         if word in index2wordset:
             nwords += 1.
-            feature_vec = np.add(feature_vec, model[word])
+            feature_vec = numpy.add(feature_vec, model[word])
 
     # divide the result by the number of words to get the average
-    feature_vec = np.divide(feature_vec, nwords)
+    feature_vec = numpy.divide(feature_vec, nwords)
     return feature_vec
 
 
 def run():
     print('Cleaning and parsing the train set movie reviews as sentences...\n')
 
-    train_sentences_pos = utils.read_and_parse(
-        config.DATA_TRAINING_POS_REVIEW, parser=parsers.SentencesParser)
-    train_sentences_neg = utils.read_and_parse(
-        config.DATA_TRAINING_NEG_REVIEW, parser=parsers.SentencesParser)
-
     train_sentences_ids, train_sentences_texts, train_sentences_sentiments = utils.build_set(
-        train_sentences_pos,
-        train_sentences_neg,
+        utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW, parser=parsers.SentencesParser),
+        utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW, parser=parsers.SentencesParser),
         is_join=False,
         is_shuffle=False)
 
@@ -78,27 +74,17 @@ def run():
 
     print('Cleaning and parsing the train set movie reviews as words...\n')
 
-    train_words_pos = utils.read_and_parse(
-        config.DATA_TRAINING_POS_REVIEW)
-    train_words_neg = utils.read_and_parse(
-        config.DATA_TRAINING_NEG_REVIEW)
-
     train_words_ids, train_words_texts, train_words_sentiments = utils.build_set(
-        train_words_pos,
-        train_words_neg,
+        utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW),
+        utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW),
         is_join=False,
         is_shuffle=False)
 
     print('Cleaning and parsing the test set movie reviews as words...\n')
 
-    test_words_pos = utils.read_and_parse(
-        config.DATA_TEST_POS_REVIEW)
-    test_words_neg = utils.read_and_parse(
-        config.DATA_TEST_NEG_REVIEW)
-
     test_words_ids, test_words_texts, test_words_sentiments = utils.build_set(
-        test_words_pos,
-        test_words_neg,
+        utils.read_and_parse(config.DATA_TEST_POS_REVIEW),
+        utils.read_and_parse(config.DATA_TEST_NEG_REVIEW),
         is_join=False,
         is_shuffle=True)
 
@@ -122,7 +108,7 @@ def run():
 
     # it can be helpful to create a meaningful model name and
     # save the model for later use. You can load it later using Word2Vec.load()
-    model_name = 'word-to-vector-model'
+    model_name = 'word-2-vec-model'
     model.save(model_name)
 
     print('Creating average feature vecs for training reviews')
@@ -136,8 +122,9 @@ def run():
         test_words_texts, model, num_features)
 
     print('Training the Random Forest, then make predictions...\n')
+    n_estimators = 100
     test_words_sentiments_predicted_rf = classifiers_sk.random_forest(
-        train_words_vectors, train_words_sentiments, test_words_vectors)
+        train_words_vectors, train_words_sentiments, test_words_vectors, n_estimators=n_estimators)
 
     print('Training the Naive Bayes Gaussian, then make predictions...\n')
     test_words_sentiments_predicted_nbg = classifiers_sk.naive_bayes_gaussian(
@@ -148,8 +135,9 @@ def run():
         train_words_vectors, train_words_sentiments, test_words_vectors)
 
     print('Training the k-Nearest Neighbors, then make predictions...\n')
+    n_neighbors = 100
     test_words_sentiments_predicted_knn = classifiers_sk.k_nearest_neighbors(
-        train_words_vectors, train_words_sentiments, test_words_vectors)
+        train_words_vectors, train_words_sentiments, test_words_vectors, n_neighbors=n_neighbors)
 
     print('Accuracy of the the Random Forest: {accuracy}\n'.format(
         accuracy=utils.calculate_accuracy(
@@ -167,43 +155,43 @@ def run():
         accuracy=utils.calculate_accuracy(
             test_words_sentiments, test_words_sentiments_predicted_knn)))
 
-    filename_rf = 'word-to-vector-bag-of-centroids-rf-model.csv'
-    filename_nbg = 'word-to-vector-bag-of-centroids-nbg-model.csv'
-    filename_nbb = 'word-to-vector-bag-of-centroids-nbb-model.csv'
-    filename_knn = 'word-to-vector-bag-of-centroids-knn-model.csv'
-    filename_summary = 'word-to-vector-bag-of-centroids-summary.txt'
+    filename_sklearn_rf = 'word-2-vec-average-vectors-sklearn-rf-model.csv'
+    filename_sklearn_nbg = 'word-2-vec-average-vectors-sklearn-nbg-model.csv'
+    filename_sklearn_nbb = 'word-2-vec-average-vectors-sklearn-nbb-model.csv'
+    filename_sklearn_knn = 'word-2-vec-average-vectors-sklearn-knn-model.csv'
+    filename_summary = 'word-2-vec-average-vectors-summary.txt'
 
     print('Wrote Random Forest results to {filename}\n'.format(
-        filename=filename_rf))
+        filename=filename_sklearn_rf))
     utils.write_results_to_csv(
         test_words_ids,
         test_words_sentiments,
         test_words_sentiments_predicted_rf,
-        filename_rf)
+        filename_sklearn_rf)
 
     print('Wrote Naive Bayes Gaussian results to {filename}\n'.format(
-        filename=filename_nbg))
+        filename=filename_sklearn_nbg))
     utils.write_results_to_csv(
         test_words_ids,
         test_words_sentiments,
         test_words_sentiments_predicted_nbg,
-        filename_nbg)
+        filename_sklearn_nbg)
 
     print('Wrote Naive Bayes Bernoulli results to {filename}\n'.format(
-        filename=filename_nbg))
+        filename=filename_sklearn_nbb))
     utils.write_results_to_csv(
         test_words_ids,
         test_words_sentiments,
         test_words_sentiments_predicted_nbb,
-        filename_nbb)
+        filename_sklearn_nbb)
 
     print('Wrote k-Nearest Neighbors results to {filename}\n'.format(
-        filename=filename_nbg))
+        filename=filename_sklearn_knn))
     utils.write_results_to_csv(
         test_words_ids,
         test_words_sentiments,
         test_words_sentiments_predicted_knn,
-        filename_knn)
+        filename_sklearn_knn)
 
     with open(filename_summary, "w") as file_summary:
         print('Size of train dataset: {size}'.format(
@@ -211,6 +199,14 @@ def run():
 
         print('Size of test dataset: {size}'.format(
             size=len(test_words_ids)), file=file_summary)
+
+        print('\n', file=file_summary)
+
+        print('Number of trees in Random Forest: {trees}'.format(
+            trees=n_estimators), file=file_summary)
+
+        print('Number of neighbors in KNN: {neighbors}'.format(
+            neighbors=n_neighbors), file=file_summary)
 
         print('\n', file=file_summary)
 

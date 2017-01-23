@@ -1,0 +1,12 @@
+Size of train dataset: 25000
+Size of test dataset: 8888
+
+
+Number of trees in Random Forest: 100
+Number of neighbors in KNN: 100
+
+
+Accuracy of the the Random Forest: 77.35148514851485
+Accuracy of the Naive Bayes Gaussian: 67.87803780378037
+Accuracy of the Naive Bayes Bernoulli: 66.41539153915392
+Accuracy of the k-Nearest Neighbors: 73.90864086408641

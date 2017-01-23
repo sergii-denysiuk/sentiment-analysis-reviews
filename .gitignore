@@ -2,4 +2,4 @@ aclImdb
 *.pyc
 **/__pycache__/*
 *.csv
-word-to-vector-model
+word-2-vec-model

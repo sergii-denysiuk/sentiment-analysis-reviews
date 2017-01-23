@@ -60,7 +60,6 @@ def build_set(positive_set, negative_set,
     if is_shuffle:
         combined = list(zip(reviews_ids, reviews_texts, reviews_sentiments))
         random.shuffle(combined)
-
         reviews_ids[:], reviews_texts[:], reviews_sentiments[:] = zip(*combined)
 
     return (reviews_ids, reviews_texts, reviews_sentiments)
