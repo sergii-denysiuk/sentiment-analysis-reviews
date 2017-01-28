@@ -140,3 +140,10 @@ Interpretacja wyników.
 Jak widzimy BagOfWords daje lepsze wyniki niż Word2Vec. Głównym powodem jest uśrednienie wektorów i wykorzystanie centroidy, prze co gubi się kolejność słów, dzięki czemu model Word2Vec jest bardzo podobnym do koncepcji modelu BagOfWords. Fakt, że wyniki są podobne (w zasięgu błąd standardowy) sprawia, że ​obydwa sposoby w praktyce są równoważne.
 
 Szkolenie Word2Vec na dużo więcej tekstu powinno znacznie poprawić wydajność. Wyniki Google są oparte na wektorach słownych, które nauczyły się z ponad miliarda słów. Dodatkowo, Word2Vec zapewnia funkcje załadowania z góry przeszkolonego modelu, który jest wyjściem oryginalnego narzędzia Google C, więc jest to również możliwe, aby trenować model w C, a następnie zaimportować je do Pythona.
+
+
+
+Materiały.
+==========
+
+https://www.kaggle.com/c/word2vec-nlp-tutorial

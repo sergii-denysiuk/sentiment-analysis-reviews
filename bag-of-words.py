@@ -1,3 +1,18 @@
+"""
+ The Bag of Words model learns a vocabulary text's, then models each text by counting the number of times each word appears. For example, consider the following two sentences:
+Sentence 1: "The cat sat on the hat"
+Sentence 2: "The dog ate the cat and the hat"
+
+From these two sentences, our vocabulary is as follows:
+{ the, cat, sat, on, hat, dog, ate, and }
+
+To get our bags of words, we count the number of times each word occurs in each sentence.
+Sentence 1: { 2, 1, 1, 1, 1, 0, 0, 0 }
+Sentence 2: { 3, 1, 0, 0, 1, 1, 1, 1 }
+
+In the IMDB data, we have a very large number of reviews, which will give us a large vocabulary. To limit the size of the feature vectors, we should choose some maximum vocabulary size. Below, we use the 5000 most frequent words (remembering that stop words have already been removed).
+"""
+
 import config
 import utils
 import classifiers.sklearn as classifiers_sk
@@ -6,74 +21,104 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 
 def run():
-    print('Creating the bag of words...\n')
+    print('Creating the bag of words...')
 
+    # note that CountVectorizer comes with its own options
+    # to automatically do preprocessing, tokenization, and stop word removal
+    # for each of these, instead of specifying "None",
+    # we could have used a built-in method or specified our own function to use. ,
+    # however, we wanted to write our own function for data cleaning
     vectorizer = CountVectorizer(analyzer='word',
                                  tokenizer=None,
                                  preprocessor=None,
                                  stop_words=None,
                                  max_features=5000)
 
-    print('Cleaning and parsing the train set movie reviews...\n')
+    print('Cleaning and parsing the train set movie reviews...')
 
-    train_ids, train_texts, train_sentiments = utils.build_set(
+    # example result:
+    # train_ids -> [1, 2, 3, ...]
+    # train_texts -> [['word1', 'word2'], ['word3', 'word4'], ['word5', 'wor6'], ...]
+    # train_sentiments -> [1, 0, 0, ...]
+    train_ids, train_texts, train_sentiments = utils.concate_sets(
         utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW),
         utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW),
         is_join=True, is_shuffle=True)
 
-    # first: fits the model and learns the vocabulary
-    # second: transforms our training data into feature vectors
+    # get a bag of words for the training set, and convert to a numpy array
+    # example result:
+    # train_texts -> [[1, 3], [1, 2], [3, 1], ...]
     train_texts = vectorizer.fit_transform(train_texts).toarray()
 
-    print('Cleaning and parsing the test set movie reviews...\n')
+    print('Cleaning and parsing the test set movie reviews...')
 
-    test_ids, test_texts, test_sentiments = utils.build_set(
+    # example result:
+    # test_ids -> [1, 2, 3, ...]
+    # test_texts -> [['word1', 'word2'], ['word3', 'word4'], ['word5', 'wor6'], ...]
+    # test_sentiments -> [1, 0, 0, ...]
+    test_ids, test_texts, test_sentiments = utils.concate_sets(
         utils.read_and_parse(config.DATA_TEST_POS_REVIEW),
         utils.read_and_parse(config.DATA_TEST_NEG_REVIEW),
         is_join=True, is_shuffle=True)
 
     # get a bag of words for the test set, and convert to a numpy array
+    # example result:
+    # test_texts -> [[1, 3], [1, 2], [3, 1], ...]
     test_texts = vectorizer.transform(test_texts).toarray()
 
-    print('Training the Random Forest...\n')
+    print('\n')
+
+    print('Training the Random Forest...')
     n_estimators = 100
+    # example result:
+    # test_sentiments_predicted_rf -> [1, 0, 1...]
     test_sentiments_predicted_rf = classifiers_sk.random_forest(
         train_texts, train_sentiments, test_texts, n_estimators=n_estimators)
 
-    print('Training the Naive Bayes Gaussian...\n')
+    print('Training the Naive Bayes Gaussian...')
+    # example result:
+    # test_sentiments_predicted_nbg -> [1, 0, 1...]
     test_sentiments_predicted_nbg = classifiers_sk.naive_bayes_gaussian(
         train_texts, train_sentiments, test_texts)
 
-    print('Training the Naive Bayes Multinomial...\n')
+    print('Training the Naive Bayes Multinomial...')
+    # example result:
+    # test_sentiments_predicted_nbm -> [1, 0, 1...]
     test_sentiments_predicted_nbm = classifiers_sk.naive_bayes_multinomial(
         train_texts, train_sentiments, test_texts)
 
-    print('Training the Naive Bayes Bernoulli...\n')
+    print('Training the Naive Bayes Bernoulli...')
+    # example result:
+    # test_sentiments_predicted_nbb -> [1, 0, 1...]
     test_sentiments_predicted_nbb = classifiers_sk.naive_bayes_bernoulli(
         train_texts, train_sentiments, test_texts)
 
-    print('Training the k-Nearest Neighbors...\n')
+    print('Training the k-Nearest Neighbors...')
     n_neighbors = 100
+    # example result:
+    # test_sentiments_predicted_knn -> [1, 0, 1...]
     test_sentiments_predicted_knn = classifiers_sk.k_nearest_neighbors(
         train_texts, train_sentiments, test_texts, n_neighbors=n_neighbors)
 
-    print('Accuracy of the the Random Forest: {accuracy}\n'.format(
+    print('\n')
+
+    print('Accuracy of the the Random Forest: {accuracy}'.format(
         accuracy=utils.calculate_accuracy(
             test_sentiments, test_sentiments_predicted_rf)))
 
-    print('Accuracy of the Naive Bayes Gaussian: {accuracy}\n'.format(
+    print('Accuracy of the Naive Bayes Gaussian: {accuracy}'.format(
         accuracy=utils.calculate_accuracy(
             test_sentiments, test_sentiments_predicted_nbg)))
 
-    print('Accuracy of the Naive Bayes Multinomial: {accuracy}\n'.format(
+    print('Accuracy of the Naive Bayes Multinomial: {accuracy}'.format(
         accuracy=utils.calculate_accuracy(
             test_sentiments, test_sentiments_predicted_nbm)))
 
-    print('Accuracy of the Naive Bayes Bernoulli: {accuracy}\n'.format(
+    print('Accuracy of the Naive Bayes Bernoulli: {accuracy}'.format(
         accuracy=utils.calculate_accuracy(
             test_sentiments, test_sentiments_predicted_nbb)))
 
-    print('Accuracy of the k-Nearest Neighbors: {accuracy}\n'.format(
+    print('Accuracy of the k-Nearest Neighbors: {accuracy}'.format(
         accuracy=utils.calculate_accuracy(
             test_sentiments, test_sentiments_predicted_knn)))
 
@@ -84,7 +129,9 @@ def run():
     filename_sklearn_knn = 'bag-of-words-sklearn-knn-model.csv'
     filename_summary = 'bag-of-words-summary.txt'
 
-    print('Wrote Random Forest results to {filename}\n'.format(
+    print('\n')
+
+    print('Wrote Random Forest results to {filename}'.format(
         filename=filename_sklearn_rf))
     utils.write_results_to_csv(
         test_ids,
@@ -92,7 +139,7 @@ def run():
         test_sentiments_predicted_rf,
         filename_sklearn_rf)
 
-    print('Wrote Naive Bayes Gaussian results to {filename}\n'.format(
+    print('Wrote Naive Bayes Gaussian results to {filename}'.format(
         filename=filename_sklearn_nbg))
     utils.write_results_to_csv(
         test_ids,
@@ -100,7 +147,7 @@ def run():
         test_sentiments_predicted_nbg,
         filename_sklearn_nbg)
 
-    print('Wrote Naive Bayes Multinomial results to {filename}\n'.format(
+    print('Wrote Naive Bayes Multinomial results to {filename}'.format(
         filename=filename_sklearn_nbm))
     utils.write_results_to_csv(
         test_ids,
@@ -108,7 +155,7 @@ def run():
         test_sentiments_predicted_nbm,
         filename_sklearn_nbm)
 
-    print('Wrote Naive Bayes Bernoulli results to {filename}\n'.format(
+    print('Wrote Naive Bayes Bernoulli results to {filename}'.format(
         filename=filename_sklearn_nbb))
     utils.write_results_to_csv(
         test_ids,
@@ -116,13 +163,16 @@ def run():
         test_sentiments_predicted_nbb,
         filename_sklearn_nbb)
 
-    print('Wrote k-Nearest Neighbors results to {filename}\n'.format(
+    print('Wrote k-Nearest Neighbors results to {filename}'.format(
         filename=filename_sklearn_knn))
     utils.write_results_to_csv(
         test_ids,
         test_sentiments,
         test_sentiments_predicted_knn,
         filename_sklearn_knn)
+
+    print('Wrote summary results to {filename}'.format(
+        filename=filename_summary))
 
     with open(filename_summary, "w") as file_summary:
         print('Size of train dataset: {size}'.format(

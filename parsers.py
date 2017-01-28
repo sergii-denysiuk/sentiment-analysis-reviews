@@ -23,7 +23,7 @@ class BaseParser(object):
 
     def __init__(self, file):
         """
-        Initialize by some text.
+        Initialize by some open buffered file with text.
 
         @args:
             file (_io.TextIOWrapper): file with raw text
@@ -52,7 +52,7 @@ class BaseParser(object):
         @returns:
             string: text cleaned from numbers and other punctuation characters
         """
-        return re.sub("[^a-zA-Z]", " ", text)
+        return re.sub('[^a-zA-Z]', ' ', text)
 
     def split_to_words(self, text):
         """
@@ -71,6 +71,8 @@ class BaseParser(object):
 
         @args:
             text (string)
+        @kwargs:
+            tokenizer (object)
         @returns:
             list: list of sentences
         """
@@ -89,7 +91,7 @@ class BaseParser(object):
 
     def remove_stopwords(self, words, stopwords_list=stopwords_list):
         """
-        Remove stop words
+        Remove stop words.
 
         @args:
             words (list)
@@ -100,7 +102,7 @@ class BaseParser(object):
         """
         return [w for w in words if w not in stopwords_list]
 
-    def parse(self):
+    def parse(self, *args, **kwargs):
         raise NotImplementedError("Should have implemented this")
 
 
@@ -112,14 +114,12 @@ class WordsParser(BaseParser):
 
     def parse(self,
               is_remove_non_letters=True,
-              is_to_lower=True,
               is_remove_stopwords=True):
         """
         Get cleaned words from text.
 
         @kwargs:
             is_remove_non_letters (boolean): is remove non-letters
-            is_to_lower (boolean): is convert to lowercase
             is_remove_stopwords (boolean): is remove the stopwords
         @returns:
             list: list with cleaned words
@@ -129,9 +129,7 @@ class WordsParser(BaseParser):
         if is_remove_non_letters:
             result = self.remove_non_letters(result)
 
-        if is_to_lower:
-            result = self.to_lower(result)
-
+        result = self.to_lower(result)
         result = self.split_to_words(result)
 
         if is_remove_stopwords:
@@ -149,7 +147,6 @@ class SentencesParser(BaseParser):
     def parse(self,
               tokenizer=tokenizer,
               is_remove_non_letters=True,
-              is_to_lower=True,
               is_sentence_split_to_words=True,
               is_remove_stopwords=False):
         """
@@ -160,9 +157,10 @@ class SentencesParser(BaseParser):
 
         @kwargs:
             tokenizer (object): tokenizer to split the paragraph into sentences
+            is_sentence_split_to_words (boolean): is sencences must be splited to words
             is_remove_stopwords (boolean): is to remove stopwords
         @returns:
-            list: list of sentences. Each sentence is a list of words, so this returns a list of lists.
+            list: list of sentences. Each sentence can be splited to a list of words, so this returns a list of lists.
         """
         sentences = []
         result = self.clean_html_markup(self.file)
@@ -173,8 +171,7 @@ class SentencesParser(BaseParser):
                 if is_remove_non_letters:
                     raw_sentence = self.remove_non_letters(raw_sentence)
 
-                if is_to_lower:
-                    raw_sentence = self.to_lower(raw_sentence)
+                raw_sentence = self.to_lower(raw_sentence)
 
                 if is_sentence_split_to_words:
                     raw_sentence = self.split_to_words(raw_sentence)

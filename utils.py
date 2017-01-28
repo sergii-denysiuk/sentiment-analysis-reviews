@@ -5,12 +5,13 @@ import numpy
 import pandas
 
 
-def read_and_parse(path_pattern, parser=parsers.WordsParser):
+def read_and_parse(path_pattern, parser=parsers.WordsParser, **kwargs):
     """
     Read and clean data from all files that match to given path-pattern.
 
     @args:
         path_pattern (string): pattern for files that must be processed
+    @kwargs:
         parser (class): parser class. Must be implementation of parsers.BaseParser class
     @returns:
         list: list of tuples, which items is a parsed and cleaned data from files
@@ -20,13 +21,13 @@ def read_and_parse(path_pattern, parser=parsers.WordsParser):
 
     for filename in glob.glob(path_pattern):
         with open(filename, 'r') as file:
-            result.append((filename, parser(file).parse()))
+            result.append((filename, parser(file).parse(**kwargs)))
 
     return result
 
 
-def build_set(positive_set, negative_set,
-              is_join=False, is_shuffle=False):
+def concate_sets(positive_set, negative_set,
+                 is_join=False, is_shuffle=False):
     """
     Build dataset from given positive and negative datasets.
 
@@ -108,6 +109,11 @@ def write_results_to_csv(ids, sentiments_actuals,
                          sentiments_predictions, filename):
     """
     Write the results to a pandas dataframe.
+
+    @args:
+        sentiments_actuals (list): list of actual sentiments
+        sentiments_predictions (list): list of predictions for sentiments
+        filename (string): name of file to write in
     """
     output = pandas.DataFrame(data={
         'id': ids,

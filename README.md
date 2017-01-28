@@ -33,7 +33,7 @@ Theory.
 ``bag-of-words.py``
 The BagOfWords model is a simplifying representation used in natural language processing and information retrieval (IR). In this model, a text (such as a sentence or a document) is represented as the bag (multiset) of its words, disregarding grammar and even word order but keeping multiplicity.
 
-``word-2-vec-average-vectors.py``
+``word-2-vec.py``
 Google's Word2Vec is a deep-learning inspired method that focuses on the meaning of words. Word2Vec attempts to understand meaning and semantic relationships among words. It works in a way that is similar to deep approaches, such as recurrent neural nets or deep neural nets, but is computationally more efficient. Word2Vec does not need labels in order to create meaningful representations. This is useful, since most data in the real world is unlabeled. If the network is given enough training data (tens of billions of words), it produces word vectors with intriguing characteristics. Words with similar meanings appear in clusters, and clusters are spaced such that some word relationships, such as analogies, can be reproduced using vector math. The famous example is that, with highly trained word vectors, "king - man + woman = queen."
 
 
@@ -55,7 +55,7 @@ $ python /path/to/project/bag-of.words.py
 
 To run Word2Vec model we need to type:
 ```
-$ python /path/to/project/word-2-vec-average-vectors.py
+$ python /path/to/project/word-2-vec.py
 ```
 
 
@@ -77,7 +77,7 @@ Description of experiments.
 - calculate accuracy of predictions and save the results
 
 
-``word-2-vec-average-vectors.py``
+``word-2-vec.py``
 - reading the data for training of Word2Vec model
 - data cleaning and text preprocessing of training data for Word2Vec
     - removing HTML markup (``BeautifulSoup``)
@@ -94,10 +94,14 @@ Description of experiments.
     - convert to lower case
     - split into individual words (called "tokenization" in ``NLP`` lingo)
     - dealing with stopwords (``NLTK``)
-- create word vectors from test and training data (using Word2Vec model)
-- train classifiers using created in previous step, training word vectors
-- make a predictions using created test word vectors
-- calculate accuracy of predictions and save the results
+- average-vectors: create word vectors from test and training data (using Word2Vec model)
+- average-vectors: train classifiers using created in previous step, training word vectors
+- average-vectors: make a predictions using created test word vectors
+- average-vectors: calculate accuracy of predictions and save the results
+- bag-of-centroids: create word vectors from test and training data (using Word2Vec model)
+- bag-of-centroids: train classifiers using created in previous step, training word vectors
+- bag-of-centroids: make a predictions using created test word vectors
+- bag-of-centroids: calculate accuracy of predictions and save the results
 
 
 
@@ -107,14 +111,12 @@ Files.
 ``README-PL.md`` - project description in Polish
 ``README.md`` - project description in English
 ``aclImdb_v1.tar.gz`` - dataset of reviews
-``bag-of-words-summary.txt`` - results of BagOfWords algorithm
 ``bag-of-words.py`` - BagOfWords algorithm
 ``config.py`` - project configuration (paths to dataset)
 ``parsers.py`` - text parsers
 ``requirements.txt`` - dependencies
 ``utils.py`` - helpful and reusable functions
-``word-2-vec-average-vectors-summary.txt`` - results of Word2Vec algorithm
-``word-2-vec-average-vectors.py`` - Word2Vec algorithm
+``word-2-vec.py`` - Word2Vec algorithm
 
 
 
@@ -127,11 +129,17 @@ Results of particular classifier for BagOfWords are stored in file:
 Summary results for BagOfWords are stored in file:
 ``bag-of-words-summary.txt``
 
-Results of particular classifier for Word2Vec are stored in file:
+Results of particular classifier for Word2Vec average-vectors are stored in file:
 ``word-2-vec-average-vectors-*-model.csv``
 
-Summary results for Word2Vec are stored in file:
+Summary results for Word2Vec average-vectors are stored in file:
 ``word-2-vec-average-vectors-summary.txt``
+
+Results of particular classifier for Word2Vec bag-of-centroids are stored in file:
+``word-2-vec-bag-of-centroids-*-model.csv``
+
+Summary results for Word2Vec bag-of-centroids are stored in file:
+``word-2-vec-bag-of-centroids-summary.txt``
 
 
 
@@ -141,3 +149,10 @@ Interpretation of results.
 As we can see BagOfWords is better then Word2Vec. The biggest reason is in averaging the vectors and using the centroids lose the order of words, making it very similar to the concept of BagOfWords. The fact that the performance is similar (within range of standard error) makes given two methods practically equivalent.
 
 Training Word2Vec on a lot more text should greatly improve performance. Google's results are based on word vectors that were learned out of more than a billion-word. Additionaly, Word2Vec provides functions to load any pre-trained model that is output by Google's original C tool, so it's also possible to train a model in C and then import it into Python.
+
+
+
+Matrials.
+=========
+
+https://www.kaggle.com/c/word2vec-nlp-tutorial
