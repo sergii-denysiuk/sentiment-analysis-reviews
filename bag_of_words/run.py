@@ -3,31 +3,46 @@
 Sentence 1: "The cat sat on the hat"
 Sentence 2: "The dog ate the cat and the hat"
 
-From these two sentences, our vocabulary is as follows:
+From these two sentences, vocabulary is as follows:
 { the, cat, sat, on, hat, dog, ate, and }
 
-To get our bags of words, we count the number of times each word occurs in each sentence.
+To get bags of words, count the number of times each word occurs in each sentence.
 Sentence 1: { 2, 1, 1, 1, 1, 0, 0, 0 }
 Sentence 2: { 3, 1, 0, 0, 1, 1, 1, 1 }
 
-In the IMDB data, we have a very large number of reviews, which will give us a large vocabulary. To limit the size of the feature vectors, we should choose some maximum vocabulary size. Below, we use the 5000 most frequent words (remembering that stop words have already been removed).
+In the IMDB data, there is a very large number of reviews, which will give a large vocabulary. To limit the size of the feature vectors, choose some maximum vocabulary size. Below, used the 5000 most frequent words (remembering that stop words have already been removed).
 """
 
 import config
+import parsers
 import utils
-import classifiers.sklearn as classifiers_sk
+import classifiers as classifiers_sk
 
 from sklearn.feature_extraction.text import CountVectorizer
 
 
 def run():
+    print("Read train data...")
+
+    train_data = utils.concat_sets(
+        utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW, parsers.WordsParser),
+        utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW, parsers.WordsParser),
+        is_join=True, is_shuffle=True)
+
+    print("Read test data...")
+
+    test_data = utils.concat_sets(
+        utils.read_and_parse(config.DATA_TEST_POS_REVIEW, parsers.WordsParser),
+        utils.read_and_parse(config.DATA_TEST_NEG_REVIEW, parsers.WordsParser),
+        is_join=True, is_shuffle=True)
+
     print('Creating the bag of words...')
 
     # note that CountVectorizer comes with its own options
     # to automatically do preprocessing, tokenization, and stop word removal
     # for each of these, instead of specifying "None",
-    # we could have used a built-in method or specified our own function to use. ,
-    # however, we wanted to write our own function for data cleaning
+    # it's possible to use a built-in method or custom function,
+    # however, in this example, for data cleaning used custom parsers
     vectorizer = CountVectorizer(analyzer='word',
                                  tokenizer=None,
                                  preprocessor=None,
@@ -36,15 +51,6 @@ def run():
 
     print('Cleaning and parsing the train set movie reviews...')
 
-    # example result:
-    # train_ids -> [1, 2, 3, ...]
-    # train_texts -> [['word1', 'word2'], ['word3', 'word4'], ['word5', 'wor6'], ...]
-    # train_sentiments -> [1, 0, 0, ...]
-    train_ids, train_texts, train_sentiments = utils.concate_sets(
-        utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW),
-        utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW),
-        is_join=True, is_shuffle=True)
-
     # get a bag of words for the training set, and convert to a numpy array
     # example result:
     # train_texts -> [[1, 3], [1, 2], [3, 1], ...]
@@ -52,21 +58,10 @@ def run():
 
     print('Cleaning and parsing the test set movie reviews...')
 
-    # example result:
-    # test_ids -> [1, 2, 3, ...]
-    # test_texts -> [['word1', 'word2'], ['word3', 'word4'], ['word5', 'wor6'], ...]
-    # test_sentiments -> [1, 0, 0, ...]
-    test_ids, test_texts, test_sentiments = utils.concate_sets(
-        utils.read_and_parse(config.DATA_TEST_POS_REVIEW),
-        utils.read_and_parse(config.DATA_TEST_NEG_REVIEW),
-        is_join=True, is_shuffle=True)
-
     # get a bag of words for the test set, and convert to a numpy array
     # example result:
     # test_texts -> [[1, 3], [1, 2], [3, 1], ...]
     test_texts = vectorizer.transform(test_texts).toarray()
-
-    print('\n')
 
     print('Training the Random Forest...')
     n_estimators = 100
@@ -100,8 +95,6 @@ def run():
     test_sentiments_predicted_knn = classifiers_sk.k_nearest_neighbors(
         train_texts, train_sentiments, test_texts, n_neighbors=n_neighbors)
 
-    print('\n')
-
     print('Accuracy of the the Random Forest: {accuracy}'.format(
         accuracy=utils.calculate_accuracy(
             test_sentiments, test_sentiments_predicted_rf)))
@@ -128,8 +121,6 @@ def run():
     filename_sklearn_nbb = 'bag-of-words-sklearn-nbb-model.csv'
     filename_sklearn_knn = 'bag-of-words-sklearn-knn-model.csv'
     filename_summary = 'bag-of-words-summary.txt'
-
-    print('\n')
 
     print('Wrote Random Forest results to {filename}'.format(
         filename=filename_sklearn_rf))

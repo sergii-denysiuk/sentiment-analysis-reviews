@@ -6,202 +6,15 @@ Word2Vec does not need labels in order to create meaningful representations. Thi
 Although Word2Vec does not require graphics processing units (GPUs) like many deep learning algorithms, it is compute intensive. Both Google's version and the Python version rely on multi-threading (running multiple processes in parallel on your computer to save time). ln order to train your model in a reasonable amount of time, you will need to install cython. Word2Vec will run without cython installed, but it will take days to run instead of minutes.
 """
 
-import config
-import utils
-import parsers
-import classifiers.sklearn as classifiers_sk
-
 from gensim.models import Word2Vec
 from sklearn.cluster import KMeans
-import numpy
+import numpy as np
 import time
 
-
-class AverageVectors(object):
-    """
-    Vector Averaging.
-
-    One challenge with the IMDB dataset is the variable-length reviews.
-    We need to find a way to take individual word vectors
-    and transform them into a feature set that is the same length for every review.
-
-    Since each word is a vector in 300-dimensional space,
-    we can use vector operations to combine the words in each review.
-    One method we tried was to simply average the word vectors
-    in a given review (for this purpose, we removed stop words, which would just add noise).
-    """
-
-    @staticmethod
-    def get(train_words_texts, test_words_texts, model, num_features):
-        """
-        Return train and test average vectors.
-        """
-
-        # example result:
-        # [[-0.01175839, -0.02443665, 0.03473418, ...],
-        #  [-0.01756256, -0.00818371, 0.01030297, ...], ...]
-        train_words_vectors = AverageVectors.get_avg_feature_vectors(
-            train_words_texts, model, num_features)
-
-        # example result:
-        # [[-0.01175839, -0.02443665, 0.03473418, ...],
-        #  [-0.01756256, -0.00818371, 0.01030297, ...], ...]
-        test_words_vectors = AverageVectors.get_avg_feature_vectors(
-            test_words_texts, model, num_features)
-
-        return (train_words_vectors, test_words_vectors)
-
-    @staticmethod
-    def get_avg_feature_vectors(reviews, model, num_features):
-        """
-        Given a set of reviews (each one a list of words),
-        calculate, the average feature vector for each one,
-        and return a 2D numpy array (list of lists).
-        """
-
-        # initialize a counter
-        counter = 0.
-
-        # preallocate a 2D numpy array, for speed
-        review_feature_vecs = numpy.zeros(
-            (len(reviews), num_features), dtype='float32')
-
-        # loop through the reviews
-        for review in reviews:
-            # call the function that makes average feature vectors
-            review_feature_vecs[counter] = AverageVectors.make_feature_vec(
-                review, model, num_features)
-            # increment the counter
-            counter += 1.
-
-        return review_feature_vecs
-
-    def make_feature_vec(words, model, num_features):
-        """
-        Function to average all of the word vectors in a given paragraph.
-        """
-
-        # pre-initialize an empty numpy array (for speed)
-        feature_vec = numpy.zeros(
-            (num_features,), dtype='float32')
-
-        nwords = 0.
-
-        # index2word is a list that contains the names of the words in
-        # the model's vocabulary. Convert it to a set, for speed
-        index2wordset = set(model.index2word)
-
-        # loop over each word in the review and, if it is in the model's
-        # vocaublary, add its feature vector to the total
-        for word in words:
-            if word in index2wordset:
-                nwords += 1.
-                feature_vec = numpy.add(feature_vec, model[word])
-
-        # divide the result by the number of words to get the average
-        feature_vec = numpy.divide(feature_vec, nwords)
-        return feature_vec
-
-
-class BagOfCentroids(object):
-    """
-    Word2Vec creates clusters of semantically related words,
-    so another possible approach is to exploit the similarity of words
-    within a cluster. Grouping vectors in this way is known as "vector quantization."
-    To accomplish this, we first need to find the centers of the word clusters,
-    which we can do by using a clustering algorithm such as K-Means.
-
-    In K-Means, the one parameter we need to set is "K," or the number of clusters.
-    How should we decide how many clusters to create?
-    Trial and error suggested that small clusters,
-    with an average of only 5 words or so per cluster,
-    gave better results than large clusters with many words
-    """
-
-    @staticmethod
-    def get(train_words_texts, test_words_texts, model, num_features):
-        """
-        Return train and test average vectors.
-        """
-        print('Run k-means on the word vectors and print a few clusters...')
-
-        start = time.time()
-
-        # set 'k' (num_clusters) to be 1/5th of the vocabulary size
-        # or an average of 5 words per cluster
-        word_vectors = model.syn0
-        num_clusters = int(word_vectors.shape[0] / 5)
-
-        # initalize a k-means object and use it to extract centroids
-        kmeans_clustering = KMeans(n_clusters=num_clusters)
-        idx = kmeans_clustering.fit_predict(word_vectors)
-
-        end = time.time()
-        elapsed = end - start
-
-        print('Time taken for K Means clustering: {time} seconds.'.format(
-            time=elapsed))
-
-        # create a Word: Index dictionary, mapping each vocabulary word to a cluster number
-        word_centroid_map = dict(zip(model.index2word, idx))
-
-        print('Show first ten clusters:')
-
-        for cluster_i in range(0, 10):
-            # find all of the words for that cluster number
-            words = []
-            for i in range(0, len(word_centroid_map.values())):
-                if(list(word_centroid_map.values())[i] == cluster_i):
-                    words.append(list(word_centroid_map.keys())[i])
-
-            # eample output:
-            # $ Cluster number 0
-            # $ Cluster words: [u'passport', u'penthouse', u'suite', u'seattle', u'apple']
-            print('Cluster number: {number}. \n Cluster words: {words} \n\n'.format(
-                number=cluster_i,
-                words=words))
-
-        print('Create bags of centroids...')
-
-        # pre-allocate an array for the training and test sets bags of centroids (for speed)
-        train_centroids = numpy.zeros(
-            (len(train_words_texts), num_clusters),
-            dtype='float32')
-        test_centroids = numpy.zeros(
-            (len(test_words_texts), num_clusters),
-            dtype='float32')
-
-        # transform the training and test sets reviews into bags of centroids
-        for index, review in enumerate(train_words_texts):
-            train_centroids[index] = BagOfCentroids.create_bag_of_centroids(
-                review, word_centroid_map)
-
-        for index, review in enumerate(test_words_texts):
-            test_centroids[index] = BagOfCentroids.create_bag_of_centroids(
-                review, word_centroid_map)
-
-        return (train_centroids, test_centroids)
-
-    def create_bag_of_centroids(wordlist, word_centroid_map):
-        """
-        Convert review into bags-of-centroids.
-        """
-
-        # the number of clusters is equal to the highest cluster index in the `word_centroid_map``
-        num_centroids = max(word_centroid_map.values()) + 1
-
-        # pre-allocate the bag of centroids vector (for speed)
-        bag_of_centroids = numpy.zeros(num_centroids, dtype='float32')
-
-        # loop over the words in the review. If the word is in the vocabulary,
-        # find which cluster it belongs to, and increment that cluster count by one
-        for word in wordlist:
-            if word in word_centroid_map:
-                index = word_centroid_map[word]
-                bag_of_centroids[index] += 1
-
-        # return the 'bag of centroids'
-        return bag_of_centroids
+import config
+import parsers
+import utils
+import classifiers as classifiers_sk
 
 
 def predict_and_save(train_ids, train_reviews, train_sentiments,
@@ -332,17 +145,15 @@ def run():
     # train_sentences_texts -> [[['s1_word1', 's1_word2'], ['s2_word3', 's2_word4']],
     #                           [['s3_word5', 's3_word6'], ['s4_word7', 's4_word8']], ...]
     # train_sentences_sentiments -> [1, 0, ...]
-    train_sentences_ids, train_sentences_texts, train_sentences_sentiments = utils.concate_sets(
-        utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW,
-                             parser=parsers.SentencesParser),
-        utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW,
-                             parser=parsers.SentencesParser),
+    train_sentences_ids, train_sentences_texts, train_sentences_sentiments = utils.concat_sets(
+        utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW, parsers.SentencesParser),
+        utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW, parsers.SentencesParser),
         is_join=False,
         is_shuffle=False)
 
     # Word2Vec expects single sentences, each one as a list of words.
     # in other words, the input format is a list of lists
-    # convert list or reviews which is list of sentences which is list words (three-level nested list)
+    # convert list of reviews which is list of sentences which is list words (three-level nested list)
     # to list of sentences which list of words (two-level nested list)
     # example result:
     # train_sentences_texts -> [['s1_word1', 's1_word2'], ['s2_word3', 's2_word4'],
@@ -355,11 +166,10 @@ def run():
     # train_ids -> [1, 2, 3, ...]
     # train_texts -> [['word1', 'word2'], ['word3', 'word4'], ['word5', 'wor6'], ...]
     # train_sentiments -> [1, 0, 0, ...]
-    train_words_ids, train_words_texts, train_words_sentiments = utils.concate_sets(
+    train_words_ids, train_words_texts, train_words_sentiments = utils.concat_sets(
         utils.read_and_parse(config.DATA_TRAINING_POS_REVIEW),
         utils.read_and_parse(config.DATA_TRAINING_NEG_REVIEW),
-        is_join=False,
-        is_shuffle=False)
+        is_join=False, is_shuffle=False)
 
     print('Cleaning and parsing the test set movie reviews as words...')
 
@@ -367,11 +177,10 @@ def run():
     # train_ids -> [1, 2, 3, ...]
     # train_texts -> [['word1', 'word2'], ['word3', 'word4'], ['word5', 'wor6'], ...]
     # train_sentiments -> [1, 0, 0, ...]
-    test_words_ids, test_words_texts, test_words_sentiments = utils.concate_sets(
+    test_words_ids, test_words_texts, test_words_sentiments = utils.concat_sets(
         utils.read_and_parse(config.DATA_TEST_POS_REVIEW),
         utils.read_and_parse(config.DATA_TEST_NEG_REVIEW),
-        is_join=False,
-        is_shuffle=True)
+        is_join=False, is_shuffle=True)
 
     # initialize and train the model (this will take some time)
     print('Training Word2Vec model...')

@@ -1,84 +1,76 @@
 import glob
-import parsers
 import random
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 
 
-def read_and_parse(path_pattern, parser=parsers.WordsParser, **kwargs):
+def read_and_parse(path_pattern, parser, **kwargs):
     """
     Read and clean data from all files that match to given path-pattern.
 
-    @args:
-        path_pattern (string): pattern for files that must be processed
-    @kwargs:
-        parser (class): parser class. Must be implementation of parsers.BaseParser class
-    @returns:
-        list: list of tuples, which items is a parsed and cleaned data from files
-              example [('file', 'review text'), ...])
+    :param path_pattern: pattern for files that must be processed
+    :type path_pattern: string
+    :param parser: parser class. Must be implementation of parsers.BaseParser class
+    :type parser: object
+    :return: tuple with filename and parsed and cleaned data from file
+             example ('file', file_data)
+    :rtype: Iterator[:class:`tuple`]
     """
-    result = []
-
     for filename in glob.glob(path_pattern):
         with open(filename, 'r') as file:
-            result.append((filename, parser(file).parse(**kwargs)))
-
-    return result
+            yield filename, parser.parse(file.read(), **kwargs)
 
 
-def concate_sets(positive_set, negative_set,
-                 is_join=False, is_shuffle=False):
+def concat_sets(positive_reviews, negative_reviews, columns,
+                is_join=False, is_shuffle=False):
     """
     Build dataset from given positive and negative datasets.
 
-    @args:
-        positive_set (list): set with positive data
-                             example [('file_1', 'positive review text'), ...])
-        negative_set (list): set with negative data
-                             example [('file_2', 'negative review text'), ...])
-    @kwargs:
-        is_join (boolean): is items in each set must be join from words to sentences
-        is_shuffle (boolean): is positive and negative review must be shuffled
-    @returns:
-        tuple: tuple of two lists with reviews and it's sentiment values, respectively
+    :param positive_reviews: list with positive data
+                         example [('file_1', 'positive review text'), ...])
+    :type positive_reviews: Iterable
+    :param negative_reviews: list with negative data
+                         example [('file_2', 'negative review text'), ...])
+    :type negative_reviews: Iterable
+    :param columns: columns names for returned DataFrame
+    :type columns: list
+    :param is_join: join items in each set from words to sentences
+    :type is_join: bool
+    :param is_shuffle: shuffle positive and negative reviews
+    :type is_shuffle: bool
+    :return : table with filenames, reviews and it's sentiment values, respectively
+    :rtype: pd.DataFrame
     """
-    reviews_ids = []
-    reviews_texts = []
-    reviews_sentiments = []
+    data = []
 
-    reviews_ids = [i[0] for i in positive_set] + \
-        [i[0] for i in negative_set]
-
-    if is_join:
-        reviews_texts = [' '.join(i[1]) for i in positive_set] + \
-            [' '.join(i[1]) for i in negative_set]
-    else:
-        reviews_texts = [i[1] for i in positive_set] + \
-            [i[1] for i in negative_set]
-
-    reviews_sentiments = [1] * len(positive_set) + [0] * len(negative_set)
+    for reviews, sentiment in ((positive_reviews, True),
+                               (negative_reviews, False)):
+        data.extend((filename,
+                     ' '.join(filedata) if is_join else filedata,
+                     sentiment)
+                    for filename, filedata in reviews)
 
     if is_shuffle:
-        combined = list(zip(reviews_ids, reviews_texts, reviews_sentiments))
-        random.shuffle(combined)
-        reviews_ids[:], reviews_texts[:], reviews_sentiments[:] = zip(*combined)
+        random.shuffle(data)
 
-    return (reviews_ids, reviews_texts, reviews_sentiments)
+    return pd.DataFrame(data,
+                        columns=columns)
 
 
 def count_words(words, dataset):
     """
-    Count of each word from ``words`` in ``dataset``.
+    Count of each word from `words` in `dataset`.
 
-    @args:
-        words (list): list of words to count
-        dataset(list): list of lists with words to be counted
-    @returns:
-        list: list of tuples with word and the number of times it appears in the given dataset
+    :param words: words to count
+    :type words: list
+    :param dataset: lists of words to be counted
+    :type dataset: list of lists
+    :return: list of tuples with word and the number of times it appeared in the given dataset
+    :rtype: list
     """
     result = []
 
-    dist = numpy.sum(dataset, axis=0)
+    dist = np.sum(dataset, axis=0)
 
     for tag, count in zip(words, dist):
         result.append((count, tag))
@@ -90,35 +82,33 @@ def calculate_accuracy(actual_list, predicted_list):
     """
     Compare two lists and get percent of they matches.
 
-    @args:
-        actual_list (list): list of actual values
-        predicted_list (list): list of received values
-    @returns:
-        float: percent of match values from predicted_list to values from actual_list
+    :param actual_list: actual values
+    :type actual_list: list
+    :param predicted_list: received values
+    :type predicted_list: list
+    :return: percent of match values from predicted_list to values from actual_list
+    :rtype: float
     """
-    valid_part_len = 0
-
-    for i, j in zip(actual_list, predicted_list):
-        if i == j:
-            valid_part_len += 1
-
+    valid_part_len = sum(i == j for i, j in zip(actual_list, predicted_list))
     return (100.0 / len(actual_list)) * valid_part_len
 
 
-def write_results_to_csv(ids, sentiments_actuals,
-                         sentiments_predictions, filename):
+def write_results_to_csv(ids,
+                         sentiments_actuals,
+                         sentiments_predictions,
+                         filename):
     """
     Write the results to a pandas dataframe.
 
-    @args:
-        sentiments_actuals (list): list of actual sentiments
-        sentiments_predictions (list): list of predictions for sentiments
-        filename (string): name of file to write in
+    :param sentiments_actuals: list of actual sentiments
+    :type sentiments_actuals: list
+    :param sentiments_predictions: list of predictions for sentiments
+    :type sentiments_predictions: list
+    :param filename: name of file to write in
+    :type filename: string
     """
-    output = pandas.DataFrame(data={
-        'id': ids,
-        'sentiment_actual': sentiments_actuals,
-        'sentiment_prediction': sentiments_predictions})
-
-    # use pandas to write the comma-separated output file
+    output = pd.DataFrame(data={
+        "id": ids,
+        "sentiment_actual": sentiments_actuals,
+        "sentiment_predicted": sentiments_predictions})
     output.to_csv(filename, index=False, quoting=3)
